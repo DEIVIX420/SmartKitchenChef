@@ -6,7 +6,7 @@
     "start": "bunx rork start -p zgue6f0wu96tvid0kjuvd --tunnel",
     "start-web": "bunx rork start -p zgue6f0wu96tvid0kjuvd --web --tunnel",
     "start-web-dev": "DEBUG=expo* bunx rork start -p zgue6f0wu96tvid0kjuvd --web --tunnel",
-    "lint": "expo lint"
+    "lint": "npx expo lint"
   },
   "dependencies": {
     "@expo/vector-icons": "^14.1.0",
@@ -35,7 +35,7 @@
     "expo-symbols": "~0.4.4",
     "expo-system-ui": "~5.0.6",
     "expo-web-browser": "^14.2.0",
-    "lucide-react-native": "^0.475.0",
+    "lucide-react-native": "^0.548.0",
     "nativewind": "^4.1.23",
     "react": "19.0.0",
     "react-dom": "19.0.0",
@@ -53,6 +53,7 @@
     "@types/react": "~19.0.10",
     "eslint": "^9.31.0",
     "eslint-config-expo": "^9.2.0",
+    "eslint-import-resolver-typescript": "^4.4.4",
     "typescript": "~5.8.3"
   },
   "private": true

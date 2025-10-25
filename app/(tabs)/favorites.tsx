@@ -1,5 +1,5 @@
-import { Colors } from "../../constants/colors";
-import { useRecipe } from "../../contexts/RecipeContext";
+import Colors from "@/constants/colors";
+import { useRecipe } from "@/contexts/RecipeContext";
 import { Heart } from "lucide-react-native";
 import React from "react";
 import {
@@ -9,6 +9,7 @@ import {
   ScrollView,
   TouchableOpacity,
   useColorScheme,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -16,12 +17,21 @@ import { useRouter } from "expo-router";
 export default function FavoritesScreen() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "dark" ? Colors.dark : Colors.light;
-  const { favoriteRecipes } = useRecipe();
+  const { favoriteRecipes, isLoading } = useRecipe();
   const router = useRouter();
   const insets = useSafeAreaInsets();
 
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}> 
+        <ActivityIndicator size="large" color={colors.tint} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your favorites...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           Favorite Recipes
@@ -59,7 +69,9 @@ export default function FavoritesScreen() {
                 onPress={() => {
                   router.push({
                     pathname: "/recipe/detail" as any,
-                    params: { recipe: JSON.stringify(recipe) },
+                    params: {
+                      recipeData: encodeURIComponent(JSON.stringify(recipe))
+                    },
                   });
                 }}
                 activeOpacity={0.7}
@@ -127,6 +139,15 @@ export default function FavoritesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
   },
   header: {
     paddingHorizontal: 20,

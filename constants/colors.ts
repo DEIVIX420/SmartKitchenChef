@@ -31,3 +31,4 @@ export default {
     danger: "#EF4444",
   },
 };
+

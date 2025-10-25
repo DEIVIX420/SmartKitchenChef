@@ -18,7 +18,7 @@ import {
 } from "react-native";
 
 import { useRouter } from "expo-router";
-import { generateText } from "@rork/toolkit-sdk";
+import { generateText } from "@/lib/ai";
 import { Recipe } from "@/types/recipe";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
@@ -32,6 +32,7 @@ export default function DiscoverScreen() {
     removeIngredient,
     clearIngredients,
     dietaryPreferences,
+    isLoading,
   } = useRecipe();
   const router = useRouter();
 
@@ -40,9 +41,6 @@ export default function DiscoverScreen() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-
-
-
   const filteredSuggestions = COMMON_INGREDIENTS.filter(
     (ing) =>
       ing.toLowerCase().includes(inputValue.toLowerCase()) &&
@@ -70,35 +68,38 @@ export default function DiscoverScreen() {
         dietaryPreferences.length > 0
           ? `\n- Dietary restrictions: ${dietaryPreferences.join(", ")}`
           : "";
-      const dishTypeInfo = selectedDishType
-        ? `\n- Dish type: ${DISH_TYPES.find((d) => d.id === selectedDishType)?.label}`
-        : "";
+      const selectedDish = selectedDishType
+        ? DISH_TYPES.find((d) => d.id === selectedDishType)
+        : undefined;
+      const dishTypeInfo = selectedDish ? `\n- Dish type: ${selectedDish.label}` : "";
 
-      const prompt = `Generate exactly 3 unique recipe ideas using these ingredients: ${ingredientList}${dietaryInfo}${dishTypeInfo}
-
-For each recipe, provide:
-1. Recipe title
-2. Brief description (1-2 sentences)
-3. Complete ingredients list with amounts
-4. Step-by-step cooking instructions
-5. Prep time (minutes)
-6. Cook time (minutes)
-7. Servings
-8. Estimated nutrition (calories, protein, carbs, fat in grams)
-
-IMPORTANT: Return ONLY a valid JSON array with no additional text before or after. Use this exact structure:
-[
-  {
-    "title": "Recipe Name",
-    "description": "Brief description",
-    "ingredients": [{"name": "ingredient", "amount": "1 cup"}],
-    "steps": ["Step 1", "Step 2"],
-    "prepTime": 15,
-    "cookTime": 30,
-    "servings": 4,
-    "nutrition": {"calories": 350, "protein": 25, "carbs": 40, "fat": 12}
-  }
-]`;
+        const prompt = [
+          `Generate exactly 3 unique recipe ideas using these ingredients: ${ingredientList}${dietaryInfo}${dishTypeInfo}`,
+          "",
+          "For each recipe, provide:",
+          "1. Recipe title",
+          "2. Brief description (1-2 sentences)",
+          "3. Complete ingredients list with amounts",
+          "4. Step-by-step cooking instructions",
+          "5. Prep time (minutes)",
+          "6. Cook time (minutes)",
+          "7. Servings",
+          "8. Estimated nutrition (calories, protein, carbs, fat in grams)",
+          "",
+          "IMPORTANT: Return ONLY a valid JSON array with no additional text before or after. Use this exact structure:",
+          "[",
+          "  {",
+          "    \"title\": \"Recipe Name\",",
+          "    \"description\": \"Brief description\",",
+          "    \"ingredients\": [{\"name\": \"ingredient\", \"amount\": \"1 cup\"}],",
+          "    \"steps\": [\"Step 1\", \"Step 2\"],",
+          "    \"prepTime\": 15,",
+          "    \"cookTime\": 30,",
+          "    \"servings\": 4,",
+          "    \"nutrition\": {\"calories\": 350, \"protein\": 25, \"carbs\": 40, \"fat\": 12}",
+          "  }",
+          "]",
+        ].join("\n");
 
       console.log("Generating recipes with ingredients:", ingredientList);
       
@@ -137,13 +138,13 @@ IMPORTANT: Return ONLY a valid JSON array with no additional text before or afte
         
         console.log(`Successfully parsed ${recipes.length} recipes`);
         
-        const enhancedRecipes = recipes.map((recipe, index) => ({
-          ...recipe,
-          id: `${Date.now()}-${index}`,
-          dishType: selectedDishType || undefined,
-          dietaryInfo: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
-          createdAt: Date.now(),
-        }));
+          const enhancedRecipes = recipes.map((recipe, index) => ({
+            ...recipe,
+            id: `${Date.now()}-${index}`,
+            dishType: selectedDish?.label,
+            dietaryInfo: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
+            createdAt: Date.now(),
+          }));
 
         router.push({
           pathname: "/recipe/results" as any,
@@ -178,8 +179,17 @@ IMPORTANT: Return ONLY a valid JSON array with no additional text before or afte
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}> 
+        <ActivityIndicator size="large" color={colors.tint} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your pantry...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={[styles.title, { color: colors.text }]}>
           What&apos;s in your kitchen?
@@ -363,8 +373,13 @@ IMPORTANT: Return ONLY a valid JSON array with no additional text before or afte
         )}
 
         {errorMessage && (
-          <View style={[styles.errorContainer, { backgroundColor: '#FF3B3020' }]}>
-            <Text style={[styles.errorText, { color: '#FF3B30' }]}>
+          <View
+            style={[
+              styles.errorContainer,
+              { backgroundColor: `${colors.danger}20` },
+            ]}
+          >
+            <Text style={[styles.errorText, { color: colors.danger }]}>
               {errorMessage}
             </Text>
           </View>
@@ -377,6 +392,15 @@ IMPORTANT: Return ONLY a valid JSON array with no additional text before or afte
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
   },
   header: {
     paddingHorizontal: 20,

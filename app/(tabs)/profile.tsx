@@ -12,14 +12,20 @@ import {
   useColorScheme,
   Modal,
   Pressable,
+  ActivityIndicator,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 export default function ProfileScreen() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "dark" ? Colors.dark : Colors.light;
-  const { dietaryPreferences, updateDietaryPreferences, ingredients, favoriteRecipes } =
-    useRecipe();
+  const {
+    dietaryPreferences,
+    updateDietaryPreferences,
+    ingredients,
+    favoriteRecipes,
+    isLoading,
+  } = useRecipe();
   const [showDietaryModal, setShowDietaryModal] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -31,8 +37,17 @@ export default function ProfileScreen() {
     }
   };
 
+  if (isLoading) {
+    return (
+      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}> 
+        <ActivityIndicator size="large" color={colors.tint} />
+        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Preparing your profile...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}> 
       <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
         <Text style={[styles.title, { color: colors.text }]}>Profile</Text>
       </View>
@@ -223,6 +238,15 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
   },
   header: {
     paddingHorizontal: 20,
