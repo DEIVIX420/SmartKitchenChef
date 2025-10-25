@@ -35,108 +35,112 @@ export default function RecipeResultsScreen() {
     <>
       <Stack.Screen
         options={{
+          headerShown: true,
           title: "Recipe Suggestions",
           headerStyle: { backgroundColor: colors.background },
           headerTintColor: colors.text,
         }}
       />
-      <View style={[styles.container, { backgroundColor: colors.background }]}>
+      <View style={[styles.container, { backgroundColor: colors.background }]}> 
         <ScrollView
           style={styles.scrollView}
           contentContainerStyle={styles.content}
           showsVerticalScrollIndicator={false}
         >
-          <Text style={[styles.heading, { color: colors.text }]}>
+          <Text style={[styles.heading, { color: colors.text }]}> 
             Found {recipes.length} recipes for you
           </Text>
-          <Text style={[styles.subheading, { color: colors.textSecondary }]}>
+          <Text style={[styles.subheading, { color: colors.textSecondary }]}> 
             AI-generated recipes based on your ingredients
           </Text>
 
           <View style={styles.recipeList}>
-            {recipes.map((recipe, index) => (
-              <AnimatedCard key={recipe.id} delay={index * 100}>
-                <TouchableOpacity
-                  style={[
-                    styles.recipeCard,
-                    { backgroundColor: colors.cardBackground },
-                  ]}
-                  onPress={() => {
-                    router.push({
-                      pathname: "/recipe/detail" as any,
-                      params: { 
-                        recipeData: encodeURIComponent(JSON.stringify(recipe))
-                      },
-                    });
-                  }}
-                  activeOpacity={0.7}
-                >
-                <View style={styles.cardHeader}>
-                  <View
+            {recipes.length === 0 ? (
+              <View style={[styles.emptyState, { borderColor: colors.border }]}> 
+                <Text style={[styles.emptyTitle, { color: colors.text }]}>No recipes available</Text>
+                <Text style={[styles.emptyText, { color: colors.textSecondary }]}>Try generating recipes again from the Discover tab.</Text>
+              </View>
+            ) : (
+              recipes.map((recipe, index) => (
+                <AnimatedCard key={recipe.id} delay={index * 100}>
+                  <TouchableOpacity
                     style={[
-                      styles.badge,
-                      { backgroundColor: colors.tint + "20" },
+                      styles.recipeCard,
+                      { backgroundColor: colors.cardBackground },
                     ]}
+                    onPress={() => {
+                      router.push({
+                        pathname: "/recipe/detail" as any,
+                        params: {
+                          recipeData: encodeURIComponent(JSON.stringify(recipe))
+                        },
+                      });
+                    }}
+                    activeOpacity={0.7}
                   >
-                    <Text style={[styles.badgeText, { color: colors.tint }]}>
-                      #{index + 1}
-                    </Text>
-                  </View>
-                </View>
+                    <View style={styles.cardHeader}>
+                      <View
+                        style={[
+                          styles.badge,
+                          { backgroundColor: colors.tint + "20" },
+                        ]}
+                      >
+                        <Text style={[styles.badgeText, { color: colors.tint }]}>#{index + 1}</Text>
+                      </View>
+                    </View>
 
-                <Text style={[styles.recipeTitle, { color: colors.text }]}>
-                  {recipe.title}
-                </Text>
-
-                {recipe.description && (
-                  <Text
-                    style={[
-                      styles.recipeDescription,
-                      { color: colors.textSecondary },
-                    ]}
-                    numberOfLines={3}
-                  >
-                    {recipe.description}
-                  </Text>
-                )}
-
-                <View style={styles.metaContainer}>
-                  <View style={styles.metaItem}>
-                    <Clock size={16} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                      {recipe.prepTime + recipe.cookTime} min
+                    <Text style={[styles.recipeTitle, { color: colors.text }]}>
+                      {recipe.title}
                     </Text>
-                  </View>
-                  <View style={styles.metaItem}>
-                    <Users size={16} color={colors.textSecondary} />
-                    <Text style={[styles.metaText, { color: colors.textSecondary }]}>
-                      {recipe.servings} servings
-                    </Text>
-                  </View>
-                </View>
 
-                {recipe.nutrition && (
-                  <View
-                    style={[
-                      styles.nutritionBar,
-                      { backgroundColor: colors.border },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.nutritionText,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      {recipe.nutrition.calories} cal • {recipe.nutrition.protein}g
-                      protein • {recipe.nutrition.carbs}g carbs •{" "}
-                      {recipe.nutrition.fat}g fat
-                    </Text>
-                  </View>
-                )}
-                </TouchableOpacity>
-              </AnimatedCard>
-            ))}
+                    {recipe.description && (
+                      <Text
+                        style={[
+                          styles.recipeDescription,
+                          { color: colors.textSecondary },
+                        ]}
+                        numberOfLines={3}
+                      >
+                        {recipe.description}
+                      </Text>
+                    )}
+
+                    <View style={styles.metaContainer}>
+                      <View style={styles.metaItem}>
+                        <Clock size={16} color={colors.textSecondary} />
+                        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                          {recipe.prepTime + recipe.cookTime} min
+                        </Text>
+                      </View>
+                      <View style={styles.metaItem}>
+                        <Users size={16} color={colors.textSecondary} />
+                        <Text style={[styles.metaText, { color: colors.textSecondary }]}>
+                          {recipe.servings} servings
+                        </Text>
+                      </View>
+                    </View>
+
+                    {recipe.nutrition && (
+                      <View
+                        style={[
+                          styles.nutritionBar,
+                          { backgroundColor: colors.border },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.nutritionText,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          {recipe.nutrition.calories} cal • {recipe.nutrition.protein}g protein • {recipe.nutrition.carbs}g carbs • {recipe.nutrition.fat}g fat
+                        </Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                </AnimatedCard>
+              ))
+            )}
           </View>
         </ScrollView>
       </View>
@@ -166,6 +170,23 @@ const styles = StyleSheet.create({
   },
   recipeList: {
     gap: 16,
+  },
+  emptyState: {
+    borderWidth: 1,
+    borderStyle: "dashed",
+    borderRadius: 16,
+    padding: 24,
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyTitle: {
+    fontSize: 18,
+    fontWeight: "600" as const,
+  },
+  emptyText: {
+    fontSize: 15,
+    textAlign: "center",
+    lineHeight: 22,
   },
   recipeCard: {
     borderRadius: 20,

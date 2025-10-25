@@ -1,47 +1,23 @@
-import { Tabs } from "expo-router";
-import { ChefHat, Heart, User } from "lucide-react-native";
-import React from "react";
+import { Stack } from "expo-router";
+import { ThemeProvider, DefaultTheme, DarkTheme } from "@react-navigation/native";
 import { useColorScheme } from "react-native";
-import Colors from "@/constants/colors";
+import { SafeAreaProvider } from "react-native-safe-area-context";
+import { RecipeProvider } from "@/contexts/RecipeContext";
 
-export default function TabLayout() {
+export default function RootLayout() {
   const colorScheme = useColorScheme();
-  const colors = colorScheme === "dark" ? Colors.dark : Colors.light;
+  const navigationTheme = colorScheme === "dark" ? DarkTheme : DefaultTheme;
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.tint,
-        tabBarInactiveTintColor: colors.tabIconDefault,
-        tabBarStyle: {
-          backgroundColor: colors.cardBackground,
-          borderTopColor: colors.border,
-          borderTopWidth: 1,
-        },
-        headerShown: false,
-      }}
-    >
-      <Tabs.Screen
-        name="index"
-        options={{
-          title: "Discover",
-          tabBarIcon: ({ color, size }) => <ChefHat color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="favorites"
-        options={{
-          title: "Favorites",
-          tabBarIcon: ({ color, size }) => <Heart color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: "Profile",
-          tabBarIcon: ({ color, size }) => <User color={color} size={size} />,
-        }}
-      />
-    </Tabs>
+    <SafeAreaProvider>
+      <RecipeProvider>
+        <ThemeProvider value={navigationTheme}>
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="recipe" options={{ headerShown: false }} />
+          </Stack>
+        </ThemeProvider>
+      </RecipeProvider>
+    </SafeAreaProvider>
   );
 }
