@@ -1,559 +1,434 @@
-import { useRecipe } from "@/contexts/RecipeContext";
 import Colors from "@/constants/colors";
+import { LinearGradient } from "expo-linear-gradient";
+import React, { useMemo, useRef, useState } from "react";
 import {
-  COMMON_INGREDIENTS,
-  DISH_TYPES,
-} from "@/constants/ingredients";
-import { Plus, X, Search, Sparkles } from "lucide-react-native";
-import React, { useState } from "react";
-import {
+  Animated,
+  Dimensions,
+  Platform,
+  Pressable,
   StyleSheet,
   Text,
   View,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
   useColorScheme,
-  ActivityIndicator,
 } from "react-native";
-
-import { useRouter } from "expo-router";
-import { generateText } from "@/lib/ai";
-import { Recipe } from "@/types/recipe";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-export default function DiscoverScreen() {
+const { width } = Dimensions.get("window");
+
+const featureCards = [
+  {
+    title: "PhotonFusion Camera",
+    description: "1-inch sensor with cinematic color science and AI-assisted night depth mapping.",
+  },
+  {
+    title: "LUMINA Neural Engine",
+    description: "On-device intelligence for instant translation, visual search, and adaptive power tuning.",
+  },
+  {
+    title: "Aurora Battery",
+    description: "48-hour smart endurance with 65W hypercharge and cryo-cooling thermal layers.",
+  },
+];
+
+const osPanels = [
+  "Adaptive holographic widgets",
+  "Immersive lock-screen depth scenes",
+  "Gesture-first multitasking and fluid transitions",
+];
+
+const lifestyleRows = [
+  "Studio portrait mode in low light",
+  "Spatial audio for travel and focus",
+  "Precision-machined titanium frame",
+];
+
+export default function LuminaLandingScreen() {
   const colorScheme = useColorScheme();
   const colors = colorScheme === "dark" ? Colors.dark : Colors.light;
   const insets = useSafeAreaInsets();
-  const {
-    ingredients,
-    addIngredient,
-    removeIngredient,
-    clearIngredients,
-    dietaryPreferences,
-    isLoading,
-  } = useRecipe();
-  const router = useRouter();
 
-  const [inputValue, setInputValue] = useState("");
-  const [selectedDishType, setSelectedDishType] = useState<string | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const filteredSuggestions = COMMON_INGREDIENTS.filter(
-    (ing) =>
-      ing.toLowerCase().includes(inputValue.toLowerCase()) &&
-      !ingredients.some((i) => i.name.toLowerCase() === ing.toLowerCase())
-  ).slice(0, 8);
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const tilt = useRef(new Animated.ValueXY({ x: 0, y: 0 })).current;
+  const [isPressed, setIsPressed] = useState(false);
 
-  const handleAddIngredient = (name: string) => {
-    if (name.trim()) {
-      addIngredient(name.trim());
-      setInputValue("");
-      setShowSuggestions(false);
-    }
+  const heroTranslateY = scrollY.interpolate({
+    inputRange: [0, 400],
+    outputRange: [0, -120],
+    extrapolate: "clamp",
+  });
+
+  const glowOpacity = scrollY.interpolate({
+    inputRange: [0, 260],
+    outputRange: [1, 0.25],
+    extrapolate: "clamp",
+  });
+
+  const cardRotateX = tilt.y.interpolate({
+    inputRange: [-20, 0, 20],
+    outputRange: ["8deg", "0deg", "-8deg"],
+  });
+
+  const cardRotateY = tilt.x.interpolate({
+    inputRange: [-20, 0, 20],
+    outputRange: ["-8deg", "0deg", "8deg"],
+  });
+
+  const heroTitle = useMemo(() => "LUMINA X1 • LUMINA Pods", []);
+
+  const handlePressIn = () => {
+    setIsPressed(true);
+    Animated.spring(tilt, {
+      toValue: { x: 15, y: -12 },
+      useNativeDriver: true,
+      friction: 7,
+    }).start();
   };
 
-  const handleGenerateRecipes = async () => {
-    if (ingredients.length === 0) {
-      return;
-    }
-
-    setIsGenerating(true);
-    setErrorMessage(null);
-    try {
-      const ingredientList = ingredients.map((i) => i.name).join(", ");
-      const dietaryInfo =
-        dietaryPreferences.length > 0
-          ? `\n- Dietary restrictions: ${dietaryPreferences.join(", ")}`
-          : "";
-      const selectedDish = selectedDishType
-        ? DISH_TYPES.find((d) => d.id === selectedDishType)
-        : undefined;
-      const dishTypeInfo = selectedDish ? `\n- Dish type: ${selectedDish.label}` : "";
-
-        const prompt = [
-          `Generate exactly 3 unique recipe ideas using these ingredients: ${ingredientList}${dietaryInfo}${dishTypeInfo}`,
-          "",
-          "For each recipe, provide:",
-          "1. Recipe title",
-          "2. Brief description (1-2 sentences)",
-          "3. Complete ingredients list with amounts",
-          "4. Step-by-step cooking instructions",
-          "5. Prep time (minutes)",
-          "6. Cook time (minutes)",
-          "7. Servings",
-          "8. Estimated nutrition (calories, protein, carbs, fat in grams)",
-          "",
-          "IMPORTANT: Return ONLY a valid JSON array with no additional text before or after. Use this exact structure:",
-          "[",
-          "  {",
-          "    \"title\": \"Recipe Name\",",
-          "    \"description\": \"Brief description\",",
-          "    \"ingredients\": [{\"name\": \"ingredient\", \"amount\": \"1 cup\"}],",
-          "    \"steps\": [\"Step 1\", \"Step 2\"],",
-          "    \"prepTime\": 15,",
-          "    \"cookTime\": 30,",
-          "    \"servings\": 4,",
-          "    \"nutrition\": {\"calories\": 350, \"protein\": 25, \"carbs\": 40, \"fat\": 12}",
-          "  }",
-          "]",
-        ].join("\n");
-
-      console.log("Generating recipes with ingredients:", ingredientList);
-      
-      const response = await generateText({ 
-        messages: [{ 
-          role: "user", 
-          content: prompt 
-        }] 
-      });
-      
-      console.log("AI Response received, type:", typeof response);
-      console.log("AI Response length:", response?.length);
-      console.log("AI Response preview:", response?.substring(0, 200));
-      
-      if (!response || typeof response !== 'string') {
-        throw new Error('Invalid response from AI service');
-      }
-      
-      let jsonStr = response.trim();
-      
-      if (jsonStr.startsWith("```json")) {
-        jsonStr = jsonStr.replace(/```json\n?/g, "").replace(/```$/g, "").trim();
-      } else if (jsonStr.startsWith("```")) {
-        jsonStr = jsonStr.replace(/```\n?/g, "").replace(/```$/g, "").trim();
-      }
-      
-      const jsonMatch = jsonStr.match(/\[[\s\S]*\]/);
-      
-      if (jsonMatch) {
-        console.log("JSON array found, parsing...");
-        const recipes = JSON.parse(jsonMatch[0]) as Recipe[];
-        
-        if (!recipes || recipes.length === 0) {
-          throw new Error("No recipes returned from AI");
-        }
-        
-        console.log(`Successfully parsed ${recipes.length} recipes`);
-        
-          const enhancedRecipes = recipes.map((recipe, index) => ({
-            ...recipe,
-            id: `${Date.now()}-${index}`,
-            dishType: selectedDish?.label,
-            dietaryInfo: dietaryPreferences.length > 0 ? dietaryPreferences : undefined,
-            createdAt: Date.now(),
-          }));
-
-        router.push({
-          pathname: "/recipe/results" as any,
-          params: { 
-            recipesData: encodeURIComponent(JSON.stringify(enhancedRecipes))
-          },
-        });
-      } else {
-        console.error("Could not find valid JSON in response:", jsonStr.substring(0, 500));
-        throw new Error("Invalid response format from AI");
-      }
-    } catch (error) {
-      console.error("Error generating recipes:", error);
-      if (error instanceof Error) {
-        console.error("Error message:", error.message);
-        console.error("Error stack:", error.stack);
-        
-        let userMessage = "Failed to generate recipes. ";
-        if (error.message.includes("Network request failed")) {
-          userMessage += "Please check your internet connection and try again.";
-        } else if (error.message.includes("JSON") || error.message.includes("parse")) {
-          userMessage += "The AI returned an invalid response. Please try again.";
-        } else {
-          userMessage += error.message;
-        }
-        setErrorMessage(userMessage);
-      } else {
-        setErrorMessage("An unexpected error occurred. Please try again.");
-      }
-    } finally {
-      setIsGenerating(false);
-    }
+  const handlePressOut = () => {
+    setIsPressed(false);
+    Animated.spring(tilt, {
+      toValue: { x: 0, y: 0 },
+      useNativeDriver: true,
+      friction: 6,
+    }).start();
   };
-
-  if (isLoading) {
-    return (
-      <View style={[styles.loadingContainer, { backgroundColor: colors.background }]}> 
-        <ActivityIndicator size="large" color={colors.tint} />
-        <Text style={[styles.loadingText, { color: colors.textSecondary }]}>Loading your pantry...</Text>
-      </View>
-    );
-  }
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}> 
-      <View style={[styles.header, { paddingTop: insets.top + 20 }]}>
-        <Text style={[styles.title, { color: colors.text }]}>
-          What&apos;s in your kitchen?
-        </Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Add ingredients and discover amazing recipes
-        </Text>
-      </View>
-
-      <ScrollView
+    <View style={[styles.container, { backgroundColor: "#05050A" }]}> 
+      <Animated.ScrollView
         style={styles.scrollView}
-        contentContainerStyle={styles.content}
+        contentContainerStyle={{ paddingBottom: 64 }}
+        onScroll={Animated.event(
+          [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+          { useNativeDriver: true }
+        )}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Your Ingredients
+        <LinearGradient
+          colors={["#07070D", "#0B1020", "#05050A"]}
+          style={[styles.hero, { paddingTop: insets.top + 20 }]}
+        >
+          <Animated.View
+            style={[
+              styles.heroOrb,
+              {
+                opacity: glowOpacity,
+                transform: [{ translateY: heroTranslateY }],
+              },
+            ]}
+          />
+
+          <Text style={styles.kicker}>LUMINA TECH · 2026 COLLECTION</Text>
+          <Text style={styles.heroTitle}>{heroTitle}</Text>
+          <Text style={styles.heroSubtitle}>
+            Ultra-modern design. Cinematic capture. Spatial sound in a single premium ecosystem.
           </Text>
 
-          <View
-            style={[
-              styles.inputContainer,
-              { backgroundColor: colors.cardBackground },
-            ]}
-          >
-            <Search size={20} color={colors.textSecondary} />
-            <TextInput
-              style={[styles.input, { color: colors.text }]}
-              placeholder="Add ingredient..."
-              placeholderTextColor={colors.textSecondary}
-              value={inputValue}
-              onChangeText={(text) => {
-                setInputValue(text);
-                setShowSuggestions(text.length > 0);
-              }}
-              onSubmitEditing={() => handleAddIngredient(inputValue)}
-              returnKeyType="done"
-            />
-            {inputValue.length > 0 && (
-              <TouchableOpacity
-                onPress={() => handleAddIngredient(inputValue)}
-                style={[styles.addButton, { backgroundColor: colors.tint }]}
-              >
-                <Plus size={18} color="#FFFFFF" strokeWidth={3} />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {showSuggestions && filteredSuggestions.length > 0 && (
-            <View
+          <Pressable onPressIn={handlePressIn} onPressOut={handlePressOut}>
+            <Animated.View
               style={[
-                styles.suggestions,
-                { backgroundColor: colors.cardBackground },
+                styles.renderCard,
+                {
+                  transform: [
+                    { perspective: 900 },
+                    { rotateX: cardRotateX },
+                    { rotateY: cardRotateY },
+                    { scale: isPressed ? 1.02 : 1 },
+                  ],
+                },
               ]}
             >
-              {filteredSuggestions.map((suggestion, index) => (
-                <TouchableOpacity
-                  key={index}
-                  style={[
-                    styles.suggestionItem,
-                    { borderBottomColor: colors.border },
-                    index === filteredSuggestions.length - 1 && {
-                      borderBottomWidth: 0,
-                    },
-                  ]}
-                  onPress={() => handleAddIngredient(suggestion)}
-                >
-                  <Text style={[styles.suggestionText, { color: colors.text }]}>
-                    {suggestion}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-
-          <View style={styles.ingredientList}>
-            {ingredients.map((ingredient) => (
-              <View
-                key={ingredient.id}
-                style={[
-                  styles.ingredientChip,
-                  { backgroundColor: colors.cardBackground },
-                ]}
+              <LinearGradient
+                colors={["#1B2038", "#0A0D17", "#161A2B"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.phoneBody}
               >
-                <Text style={[styles.ingredientText, { color: colors.text }]}>
-                  {ingredient.name}
-                </Text>
-                <TouchableOpacity
-                  onPress={() => removeIngredient(ingredient.id)}
-                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                >
-                  <X size={16} color={colors.textSecondary} strokeWidth={2.5} />
-                </TouchableOpacity>
+                <View style={styles.cameraModule} />
+                <View style={styles.phoneGlow} />
+                <Text style={styles.deviceLabel}>LUMINA X1</Text>
+              </LinearGradient>
+              <View style={styles.podsWrap}>
+                <View style={styles.pod} />
+                <View style={[styles.pod, styles.podSecondary]} />
+                <Text style={styles.deviceLabel}>LUMINA Pods</Text>
+              </View>
+            </Animated.View>
+          </Pressable>
+        </LinearGradient>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Flagship Features</Text>
+          {featureCards.map((item) => (
+            <View key={item.title} style={styles.featureCard}>
+              <Text style={styles.featureTitle}>{item.title}</Text>
+              <Text style={styles.featureDescription}>{item.description}</Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>LUMINA OS Preview</Text>
+          <View style={styles.osPreviewWrap}>
+            {osPanels.map((panel) => (
+              <View key={panel} style={styles.osPanel}>
+                <LinearGradient colors={["#00E7FF22", "#8A5CFF33"]} style={styles.osGradient}>
+                  <Text style={styles.osText}>{panel}</Text>
+                </LinearGradient>
               </View>
             ))}
           </View>
-
-          {ingredients.length > 0 && (
-            <TouchableOpacity onPress={clearIngredients}>
-              <Text style={[styles.clearText, { color: colors.tint }]}>
-                Clear all
-              </Text>
-            </TouchableOpacity>
-          )}
         </View>
 
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Dish Type
-          </Text>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.dishTypeScroll}
-          >
-            {DISH_TYPES.map((type) => (
-              <TouchableOpacity
-                key={type.id}
-                style={[
-                  styles.dishTypeChip,
-                  {
-                    backgroundColor:
-                      selectedDishType === type.id
-                        ? colors.tint
-                        : colors.cardBackground,
-                  },
-                ]}
-                onPress={() =>
-                  setSelectedDishType(
-                    selectedDishType === type.id ? null : type.id
-                  )
-                }
-                activeOpacity={0.7}
-              >
-                <Text style={styles.dishTypeEmoji}>{type.emoji}</Text>
-                <Text
-                  style={[
-                    styles.dishTypeText,
-                    {
-                      color:
-                        selectedDishType === type.id ? "#FFFFFF" : colors.text,
-                    },
-                  ]}
-                >
-                  {type.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <Text style={styles.sectionTitle}>Lifestyle · Shot on LUMINA</Text>
+          {lifestyleRows.map((shot) => (
+            <View key={shot} style={styles.lifestyleShot}>
+              <LinearGradient colors={["#161A2B", "#0A0D17"]} style={StyleSheet.absoluteFillObject} />
+              <Text style={styles.lifestyleText}>{shot}</Text>
+            </View>
+          ))}
         </View>
 
-        <TouchableOpacity
-          style={[
-            styles.generateButton,
-            {
-              backgroundColor:
-                ingredients.length > 0 && !isGenerating
-                  ? colors.tint
-                  : colors.border,
-            },
-          ]}
-          onPress={handleGenerateRecipes}
-          disabled={ingredients.length === 0 || isGenerating}
-          activeOpacity={0.8}
-        >
-          {isGenerating ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <>
-              <Sparkles size={24} color="#FFFFFF" fill="#FFFFFF" />
-              <Text style={styles.generateButtonText}>Generate Recipes</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        {ingredients.length === 0 && (
-          <Text style={[styles.helpText, { color: colors.textSecondary }]}>
-            Add at least one ingredient to start generating recipes
-          </Text>
-        )}
-
-        {errorMessage && (
-          <View
-            style={[
-              styles.errorContainer,
-              { backgroundColor: `${colors.danger}20` },
-            ]}
-          >
-            <Text style={[styles.errorText, { color: colors.danger }]}>
-              {errorMessage}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Premium Packaging</Text>
+          <View style={styles.packagingScene}>
+            <Animated.View
+              style={[
+                styles.packageBox,
+                {
+                  transform: [
+                    {
+                      translateY: scrollY.interpolate({
+                        inputRange: [300, 900],
+                        outputRange: [24, -18],
+                        extrapolate: "clamp",
+                      }),
+                    },
+                  ],
+                },
+              ]}
+            />
+            <Text style={styles.packagingCopy}>
+              Matte obsidian box, magnetic reveal, laser-etched branding, and modular accessory trays.
             </Text>
           </View>
-        )}
-      </ScrollView>
+        </View>
+      </Animated.ScrollView>
+
+      <View style={[styles.ctaBar, { paddingBottom: Math.max(insets.bottom, 12) }]}> 
+        <Text style={[styles.ctaText, { color: colors.text }]}>Pre-order opens in 03:12:45</Text>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
+  container: { flex: 1 },
+  scrollView: { flex: 1 },
+  hero: {
+    minHeight: 760,
+    paddingHorizontal: 22,
+    paddingBottom: 30,
   },
-  loadingContainer: {
-    flex: 1,
+  heroOrb: {
+    position: "absolute",
+    top: 20,
+    alignSelf: "center",
+    width: width * 0.9,
+    height: width * 0.9,
+    borderRadius: 999,
+    backgroundColor: "#00EAFF1A",
+    shadowColor: "#00E7FF",
+    shadowOpacity: 0.65,
+    shadowRadius: 60,
+  },
+  kicker: {
+    color: "#7D8CB4",
+    letterSpacing: 2,
+    fontSize: 11,
+    fontWeight: "700",
+    marginTop: 16,
+  },
+  heroTitle: {
+    color: "#F5F7FF",
+    fontSize: 42,
+    fontWeight: "800",
+    marginTop: 14,
+    lineHeight: 48,
+  },
+  heroSubtitle: {
+    color: "#B8C0DF",
+    fontSize: 16,
+    marginTop: 12,
+    lineHeight: 24,
+    maxWidth: 540,
+  },
+  renderCard: {
+    marginTop: 28,
+    borderRadius: 28,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: "#56CFFF44",
+    backgroundColor: "#0A0F20",
+    shadowColor: "#00E7FF",
+    shadowOpacity: 0.35,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 16 },
+  },
+  phoneBody: {
+    borderRadius: 24,
+    height: Platform.OS === "web" ? 330 : 300,
+    justifyContent: "flex-end",
+    padding: 18,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "#A9BFFF22",
+  },
+  cameraModule: {
+    position: "absolute",
+    top: 20,
+    right: 18,
+    width: 74,
+    height: 74,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: "#FFFFFF35",
+    backgroundColor: "#101728",
+  },
+  phoneGlow: {
+    position: "absolute",
+    left: -20,
+    bottom: -30,
+    width: 220,
+    height: 120,
+    borderRadius: 120,
+    backgroundColor: "#72F0FF44",
+  },
+  podsWrap: {
+    marginTop: 14,
+    flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
-    gap: 16,
+    gap: 10,
   },
-  loadingText: {
-    fontSize: 16,
+  pod: {
+    width: 54,
+    height: 82,
+    borderRadius: 30,
+    borderWidth: 1,
+    borderColor: "#FFFFFF22",
+    backgroundColor: "#F7FAFF",
   },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 16,
+  podSecondary: {
+    backgroundColor: "#DDE3F2",
+    transform: [{ rotate: "8deg" }],
   },
-  title: {
-    fontSize: 32,
-    fontWeight: "700" as const,
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 16,
-    lineHeight: 22,
-  },
-  scrollView: {
-    flex: 1,
-  },
-  content: {
-    paddingHorizontal: 20,
-    paddingBottom: 20,
+  deviceLabel: {
+    color: "#EAF1FF",
+    fontWeight: "700",
+    marginLeft: "auto",
+    letterSpacing: 1.1,
   },
   section: {
-    marginBottom: 32,
+    paddingHorizontal: 22,
+    marginTop: 26,
   },
   sectionTitle: {
-    fontSize: 20,
-    fontWeight: "600" as const,
+    color: "#EDF2FF",
+    fontSize: 26,
+    fontWeight: "800",
+    marginBottom: 14,
+  },
+  featureCard: {
+    backgroundColor: "#0D1222",
+    borderWidth: 1,
+    borderColor: "#7A9AFF33",
+    borderRadius: 20,
+    padding: 18,
     marginBottom: 12,
   },
-  inputContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
+  featureTitle: {
+    color: "#F6F8FF",
+    fontSize: 18,
+    fontWeight: "700",
   },
-  input: {
-    flex: 1,
-    fontSize: 16,
-    paddingVertical: 4,
-  },
-  addButton: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  suggestions: {
+  featureDescription: {
+    color: "#A9B8DF",
     marginTop: 8,
-    borderRadius: 12,
+    lineHeight: 22,
+  },
+  osPreviewWrap: {
+    gap: 10,
+  },
+  osPanel: {
+    borderRadius: 18,
     overflow: "hidden",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    borderWidth: 1,
+    borderColor: "#7AE7FF44",
   },
-  suggestionItem: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-  },
-  suggestionText: {
-    fontSize: 15,
-  },
-  ingredientList: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 12,
-  },
-  ingredientChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingLeft: 14,
-    paddingRight: 10,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  ingredientText: {
-    fontSize: 15,
-    fontWeight: "500" as const,
-  },
-  clearText: {
-    fontSize: 15,
-    fontWeight: "600" as const,
-    marginTop: 12,
-  },
-  dishTypeScroll: {
-    gap: 8,
-  },
-  dishTypeChip: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
-    borderRadius: 20,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 1,
-  },
-  dishTypeEmoji: {
-    fontSize: 18,
-  },
-  dishTypeText: {
-    fontSize: 15,
-    fontWeight: "500" as const,
-  },
-  generateButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-    paddingVertical: 18,
-    borderRadius: 16,
-    marginTop: 8,
-  },
-  generateButtonText: {
-    color: "#FFFFFF",
-    fontSize: 18,
-    fontWeight: "600" as const,
-  },
-  helpText: {
-    fontSize: 14,
-    textAlign: "center",
-    marginTop: 12,
-    lineHeight: 20,
-  },
-  errorContainer: {
-    marginTop: 16,
+  osGradient: {
     padding: 16,
-    borderRadius: 12,
+    minHeight: 88,
+    justifyContent: "center",
   },
-  errorText: {
-    fontSize: 14,
-    textAlign: "center",
-    lineHeight: 20,
-    fontWeight: "500" as const,
+  osText: {
+    color: "#E8EEFF",
+    fontWeight: "600",
+    fontSize: 16,
+  },
+  lifestyleShot: {
+    height: 170,
+    borderRadius: 24,
+    marginBottom: 12,
+    overflow: "hidden",
+    justifyContent: "flex-end",
+    padding: 18,
+    borderWidth: 1,
+    borderColor: "#FFFFFF1A",
+  },
+  lifestyleText: {
+    color: "#EEF2FF",
+    fontSize: 17,
+    fontWeight: "600",
+  },
+  packagingScene: {
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "#A9BFFF33",
+    backgroundColor: "#090D17",
+    padding: 18,
+  },
+  packageBox: {
+    height: 170,
+    borderRadius: 20,
+    backgroundColor: "#13192A",
+    borderWidth: 1,
+    borderColor: "#E6EDFF22",
+    marginBottom: 14,
+    shadowColor: "#8A5CFF",
+    shadowOpacity: 0.38,
+    shadowRadius: 30,
+    shadowOffset: { width: 0, height: 12 },
+  },
+  packagingCopy: {
+    color: "#B1BFDD",
+    lineHeight: 22,
+  },
+  ctaBar: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingTop: 10,
+    alignItems: "center",
+    backgroundColor: "#070A14E6",
+    borderTopWidth: 1,
+    borderColor: "#73E9FF33",
+  },
+  ctaText: {
+    fontWeight: "700",
+    letterSpacing: 0.7,
+    color: "#EEF2FF",
   },
 });
